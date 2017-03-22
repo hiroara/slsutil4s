@@ -6,25 +6,30 @@ import scala.collection.JavaConverters._
 import org.json4s._
 import org.json4s.native.JsonMethods._
 
-case class Request[P <: PathParameters, Q <: QueryParameters, B <: RequestBody](val path: P, val query: Q, val body: B, val rawBody: Option[String])
+case class Request[P <: PathParameters, Q <: QueryParameters, B <: RequestBody, H <: RequestHeaders](
+  val path: P, val query: Q, val body: B, val rawBody: Option[String], val headers: H
+)
 
 object Request {
   val emptyPathParameters: (Map[String, String]) => PathParameters = (_) => PathParameters.Empty
   val emptyQueryParameters: (Map[String, String]) => QueryParameters = (_) => QueryParameters.Empty
   val emptyRequestBody: (JValue) => RequestBody = (_) => RequestBody.Empty
+  val emptyRequestHeaders: (Map[String, String]) => RequestHeaders = (_) => RequestHeaders.Empty
 
-  def apply[P <: PathParameters, Q <: QueryParameters, B <: RequestBody](data: java.util.Map[String, Object])(
+  def apply[P <: PathParameters, Q <: QueryParameters, B <: RequestBody, H <: RequestHeaders](data: java.util.Map[String, Object])(
     path: Map[String, String] => P = emptyPathParameters,
     query: Map[String, String] => Q = emptyQueryParameters,
-    body: JValue => B = emptyRequestBody
-  ): Request[P, Q, B] = apply(data.asScala.filterNot(_._2 == null).toMap, path, query, body)
+    body: JValue => B = emptyRequestBody,
+    headers: Map[String, String] => H = emptyRequestHeaders
+  ): Request[P, Q, B, H] = apply(data.asScala.filterNot(_._2 == null).toMap, path, query, body, headers)
 
-  def apply[P <: PathParameters, Q <: QueryParameters, B <: RequestBody](
+  def apply[P <: PathParameters, Q <: QueryParameters, B <: RequestBody, H <: RequestHeaders](
     data: Map[String, Any],
     path: Map[String, String] => P,
     query: Map[String, String] => Q,
-    body: JValue => B
-  ): Request[P, Q, B] = {
+    body: JValue => B,
+    headers: Map[String, String] => H
+  ): Request[P, Q, B, H] = {
     val rawBody = data.get("body").map(_.asInstanceOf[String])
     Request(
       data.get("pathParameters").map(_.asInstanceOf[java.util.Map[String, String]]) match {
@@ -39,7 +44,11 @@ object Request {
         case Some(value) => body(value)
         case None => body(parse("{}"))
       },
-      rawBody
+      rawBody,
+      data.get("headers").map(_.asInstanceOf[java.util.Map[String, String]]) match {
+        case Some(data) => headers(data.asScala.filterNot(_._2 == null).toMap)
+        case None => headers(Map())
+      }
     )
   }
 }
@@ -57,6 +66,11 @@ object QueryParameters {
 trait RequestBody
 object RequestBody {
   object Empty extends RequestBody
+}
+
+trait RequestHeaders
+object RequestHeaders {
+  object Empty extends RequestHeaders
 }
 
 object ParamParser {
