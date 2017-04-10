@@ -53,3 +53,9 @@ case class NotFoundResponse(message: String) extends ResponseType {
   def headers: Map[String, String] = ResponseType.defaultHeaders
   def body: String = compact(render(Map("message" -> message)))
 }
+
+case class InternalServerErrorResponse(message: String) extends ResponseType {
+  def statusCode: Int = 500
+  def headers: Map[String, String] = ResponseType.defaultHeaders
+  def body: String = compact(render(Map("message" -> message)))
+}
