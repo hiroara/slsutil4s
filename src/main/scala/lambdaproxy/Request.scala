@@ -7,7 +7,7 @@ import org.json4s._
 import org.json4s.native.JsonMethods._
 
 case class Request[P <: PathParameters, Q <: QueryParameters, B <: RequestBody, H <: RequestHeaders](
-  val path: P, val query: Q, val body: B, val rawBody: Option[String], val headers: H
+  val path: P, val query: Q, val body: B, val rawBody: Option[String], val headers: H, val requestContext: Option[RequestContext]
 )
 
 object Request {
@@ -48,7 +48,8 @@ object Request {
       data.get("headers").map(_.asInstanceOf[java.util.Map[String, String]]) match {
         case Some(data) => headers(data.asScala.filterNot(_._2 == null).toMap)
         case None => headers(Map())
-      }
+      },
+      data.get("requestContext").map(_.asInstanceOf[java.util.Map[String, Any]].asScala.toMap).map(RequestContext(_))
     )
   }
 }
